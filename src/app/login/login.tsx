@@ -36,6 +36,11 @@ export function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Đóng bàn phím ảo và bỏ focus trên điện thoại khi nhấn Enter / Submit
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+
     setIsLoading(true);
     setLoginError("");
     setLoginSuccess(false);
@@ -105,7 +110,7 @@ export function Login() {
 
             <div className="mt-6 sm:mt-8">
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-medium bg-white/10 text-[#f5dbd4] border border-white/15 backdrop-blur-md">
-                <Sparkles size={12} className="text-[#f7c2b6}" />
+                <Sparkles size={12} className="text-[#f7c2b6]" />
                 Phiên bản Quản lý 2.0
               </span>
 
@@ -147,7 +152,7 @@ export function Login() {
 
                 <div className="text-right shrink-0">
                   <span className="text-[11px] text-[#fad4cb] font-medium flex items-center gap-1">
-                    <Sparkle size={11} className="text-[#ffbfae}" />
+                    <Sparkle size={11} className="text-[#ffbfae]" />
                     Tuệ Tuệ Studio
                   </span>
                 </div>
@@ -187,7 +192,7 @@ export function Login() {
             {/* Header */}
             <div className="mb-7">
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-[#f9eee9] text-[#8c5449] mb-3">
-                <Sparkles size={13} className="text-[#a86558}" />
+                <Sparkles size={13} className="text-[#a86558]" />
                 Đăng nhập tài khoản Nail
               </div>
 
@@ -235,7 +240,7 @@ export function Login() {
                       setLoginError("");
                     }}
                     placeholder="admin@tuetuebeauty.vn"
-                    className={`w-full pl-10 pr-4 py-2.5 sm:py-3 bg-[#fdfbf9] border rounded-xl text-xs sm:text-sm text-[#342420] placeholder-[#b29f98] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#aa756b]/30 transition-all ${
+                    className={`w-full pl-10 pr-4 py-2.5 sm:py-3 bg-[#fdfbf9] border rounded-xl text-base sm:text-sm text-[#342420] placeholder-[#b29f98] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#aa756b]/30 transition-all ${
                       loginError
                         ? "border-red-400 focus:border-red-500"
                         : "border-[#e5d8d0] focus:border-[#a66258]"
@@ -279,7 +284,7 @@ export function Login() {
                       setLoginError("");
                     }}
                     placeholder="••••••••"
-                    className={`w-full pl-10 pr-11 py-2.5 sm:py-3 bg-[#fdfbf9] border rounded-xl text-xs sm:text-sm text-[#342420] placeholder-[#b29f98] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#aa756b]/30 transition-all ${
+                    className={`w-full pl-10 pr-11 py-2.5 sm:py-3 bg-[#fdfbf9] border rounded-xl text-base sm:text-sm text-[#342420] placeholder-[#b29f98] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#aa756b]/30 transition-all ${
                       loginError
                         ? "border-red-400 focus:border-red-500"
                         : "border-[#e5d8d0] focus:border-[#a66258]"
