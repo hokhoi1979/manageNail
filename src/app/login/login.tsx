@@ -36,7 +36,6 @@ export function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Đóng bàn phím ảo và bỏ focus trên điện thoại khi nhấn Enter / Submit
     if (document.activeElement instanceof HTMLElement) {
       document.activeElement.blur();
     }
@@ -52,12 +51,9 @@ export function Login() {
       });
 
       setAuth(res.user, res.tokens);
-
       setLoginSuccess(true);
-
       toast.success("Đăng nhập thành công!");
-
-      router.push("/");
+      router.push("/home");
     } catch (error: unknown) {
       console.error("Login error:", error);
 
@@ -76,15 +72,15 @@ export function Login() {
   };
 
   return (
-    <div className="relative min-h-screen w-full bg-[#faf5f2] text-[#2c221e] flex items-center justify-center p-3 sm:p-6 lg:p-10 overflow-x-hidden selection:bg-[#dfb0a3] selection:text-[#38231f]">
+    <div className="relative min-h-dvh w-full bg-[#faf5f2] text-[#2c221e] flex items-center justify-center p-3 sm:p-6 lg:p-10 overflow-x-hidden selection:bg-[#dfb0a3] selection:text-[#38231f]">
       {/* Background */}
-      <div className="absolute top-[-10%] left-[-8%] w-[450px] sm:w-[540px] h-[450px] sm:h-[540px] rounded-full bg-[#f6ded4]/60 blur-[130px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-6%] w-[480px] sm:w-[600px] h-[480px] sm:h-[600px] rounded-full bg-[#ebdcd3]/70 blur-[140px] pointer-events-none" />
+      <div className="absolute top-[-10%] left-[-8%] w-[320px] sm:w-[540px] h-[320px] sm:h-[540px] rounded-full bg-[#f6ded4]/60 blur-[110px] pointer-events-none" />
+      <div className="absolute bottom-[-10%] right-[-6%] w-[340px] sm:w-[600px] h-[340px] sm:h-[600px] rounded-full bg-[#ebdcd3]/70 blur-[120px] pointer-events-none" />
 
       {/* Main Container */}
-      <div className="relative w-full max-w-[1100px] min-h-[640px] bg-white rounded-3xl shadow-[0_20px_60px_rgba(74,45,49,0.08)] border border-[#ede3dc] overflow-hidden grid grid-cols-1 lg:grid-cols-12">
-        {/* Left Column */}
-        <div className="lg:col-span-5 bg-gradient-to-br from-[#4a2d31] via-[#5c373b] to-[#3a2024] p-6 sm:p-8 lg:p-10 text-white flex flex-col justify-between relative overflow-hidden">
+      <div className="relative w-full max-w-[440px] lg:max-w-[1100px] lg:min-h-[640px] bg-white rounded-2xl sm:rounded-3xl shadow-[0_20px_60px_rgba(74,45,49,0.08)] border border-[#ede3dc] overflow-hidden grid grid-cols-1 lg:grid-cols-12">
+        {/* Left Column: Ẩn trên mobile/tablet để không gây scroll, chỉ hiện từ màn hình lớn (lg) */}
+        <div className="hidden lg:flex lg:col-span-5 bg-gradient-to-br from-[#4a2d31] via-[#5c373b] to-[#3a2024] p-10 text-white flex-col justify-between relative overflow-hidden">
           <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:20px_20px] pointer-events-none" />
           <div className="absolute -bottom-20 -right-20 w-80 h-80 rounded-full bg-[#aa756b]/30 blur-3xl pointer-events-none" />
 
@@ -102,19 +98,19 @@ export function Login() {
                   </span>
                 </h2>
 
-                <p className="text-[10px] sm:text-[11px] text-[#e3cfc9] tracking-wider uppercase font-medium">
+                <p className="text-[11px] text-[#e3cfc9] tracking-wider uppercase font-medium">
                   HỆ THỐNG QUẢN TRỊ Nail
                 </p>
               </div>
             </div>
 
-            <div className="mt-6 sm:mt-8">
+            <div className="mt-8">
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-medium bg-white/10 text-[#f5dbd4] border border-white/15 backdrop-blur-md">
                 <Sparkles size={12} className="text-[#f7c2b6]" />
                 Phiên bản Quản lý 2.0
               </span>
 
-              <h1 className="font-serif text-2xl sm:text-3xl font-normal leading-tight mt-3 text-[#fffbf9]">
+              <h1 className="font-serif text-3xl font-normal leading-tight mt-3 text-[#fffbf9]">
                 Nâng niu nét đẹp, <br />
                 <span className="italic font-serif text-[#f2c7bd]">
                   vận hành chuẩn xác.
@@ -129,12 +125,12 @@ export function Login() {
           </div>
 
           {/* Nail Art Image */}
-          <div className="relative z-10 my-6 sm:my-7">
+          <div className="relative z-10 my-7">
             <div className="relative rounded-2xl overflow-hidden border border-white/20 shadow-2xl group">
               <img
                 src="https://images.unsplash.com/photo-1604654894610-df63bc536371?auto=format&fit=crop&w=800&q=80"
                 alt="Tuệ Tuệ Nail Art"
-                className="w-full h-48 sm:h-52 object-cover transition-transform duration-500 group-hover:scale-105"
+                className="w-full h-52 object-cover transition-transform duration-500 group-hover:scale-105"
               />
 
               <div className="absolute inset-0 bg-gradient-to-t from-[#2c181b]/90 via-[#3a2125]/30 to-transparent" />
@@ -186,43 +182,65 @@ export function Login() {
           </div>
         </div>
 
-        {/* Right Column */}
-        <div className="lg:col-span-7 p-6 sm:p-10 lg:p-12 flex flex-col justify-between bg-white">
-          <div className="max-w-md mx-auto w-full">
+        {/* Right Column (Form đăng nhập) */}
+        <div className="lg:col-span-7 p-5 sm:p-8 lg:p-12 flex flex-col justify-between bg-white">
+          {/* Mobile Compact Brand Banner (Chỉ hiện trên màn hình < lg) */}
+          <div className="lg:hidden flex items-center justify-between pb-4 mb-4 border-b border-[#f0e4dd]">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#4a2d31] to-[#5c373b] flex items-center justify-center text-white font-serif text-lg font-bold shadow-sm shrink-0">
+                T
+              </div>
+              <div>
+                <h2 className="font-serif text-sm tracking-wider font-semibold text-[#342420] leading-none">
+                  TUỆ TUỆ{" "}
+                  <span className="italic font-normal text-[#a66258]">
+                    beauty
+                  </span>
+                </h2>
+                <p className="text-[10px] text-[#82716b] uppercase tracking-wider mt-0.5">
+                  Quản trị nội bộ
+                </p>
+              </div>
+            </div>
+
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-medium bg-[#f9eee9] text-[#8c5449]">
+              <Sparkles size={11} className="text-[#a86558]" />
+              v2.0
+            </span>
+          </div>
+
+          <div className="max-w-md mx-auto w-full my-auto">
             {/* Header */}
-            <div className="mb-7">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-[#f9eee9] text-[#8c5449] mb-3">
+            <div className="mb-4 sm:mb-7">
+              <div className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-[#f9eee9] text-[#8c5449] mb-3">
                 <Sparkles size={13} className="text-[#a86558]" />
                 Đăng nhập tài khoản Nail
               </div>
 
-              <h2 className="text-2xl sm:text-3xl font-bold text-[#342420] tracking-tight">
+              <h2 className="text-xl sm:text-3xl font-bold text-[#342420] tracking-tight">
                 Chào mừng trở lại!
               </h2>
 
-              <p className="text-xs sm:text-sm text-[#82716b] mt-1.5">
-                Vui lòng nhập email và mật khẩu để vào trang quản trị đặt lịch
-                và cài đặt Nail.
+              <p className="text-xs sm:text-sm text-[#82716b] mt-1">
+                Nhập email và mật khẩu để vào trang quản trị đặt lịch.
               </p>
             </div>
 
             {/* Success Alert */}
             {loginSuccess && (
-              <div className="mb-5 p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 flex items-center gap-2.5 text-xs animate-in fade-in">
-                <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
-
+              <div className="mb-3.5 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 flex items-center gap-2 text-xs">
+                <CheckCircle2 size={15} className="text-emerald-600 shrink-0" />
                 <span>
-                  <strong>Đăng nhập thành công!</strong> Đang chuyển vào trang
-                  quản lý...
+                  <strong>Đăng nhập thành công!</strong> Đang chuyển hướng...
                 </span>
               </div>
             )}
 
             {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
               {/* Email */}
               <div>
-                <label className="block text-xs font-semibold text-[#513e38] mb-1.5">
+                <label className="block text-xs font-semibold text-[#513e38] mb-1">
                   Email quản trị Nail
                 </label>
 
@@ -251,7 +269,7 @@ export function Login() {
 
               {/* Password */}
               <div>
-                <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center justify-between mb-1">
                   <label className="block text-xs font-semibold text-[#513e38]">
                     Mật khẩu
                   </label>
@@ -303,13 +321,12 @@ export function Login() {
 
                 {/* Red Error Message */}
                 {loginError && (
-                  <div className="mt-2.5 p-3 rounded-xl bg-red-50 border border-red-200 flex items-start gap-2 animate-in fade-in duration-200">
+                  <div className="mt-2 p-2.5 rounded-xl bg-red-50 border border-red-200 flex items-start gap-2">
                     <AlertCircle
-                      size={16}
+                      size={15}
                       className="text-red-500 shrink-0 mt-0.5"
                     />
-
-                    <span className="text-xs text-red-600 font-medium leading-relaxed">
+                    <span className="text-xs text-red-600 font-medium leading-snug">
                       {loginError}
                     </span>
                   </div>
@@ -317,7 +334,7 @@ export function Login() {
               </div>
 
               {/* Remember Me */}
-              <div className="flex items-center justify-between pt-1">
+              <div className="flex items-center justify-between pt-0.5">
                 <label className="flex items-center gap-2 cursor-pointer select-none">
                   <input
                     type="checkbox"
@@ -340,7 +357,7 @@ export function Login() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full mt-2 py-3 px-5 rounded-xl font-semibold text-xs sm:text-sm text-white bg-gradient-to-r from-[#4a2d31] via-[#5c373b] to-[#4a2d31] hover:from-[#5a363b] hover:to-[#5a363b] active:scale-[0.99] shadow-[0_8px_20px_rgba(74,45,49,0.22)] transition-all flex items-center justify-center gap-2 disabled:opacity-75 disabled:cursor-not-allowed cursor-pointer"
+                className="w-full mt-1 py-2.5 sm:py-3 px-5 rounded-xl font-semibold text-sm text-white bg-gradient-to-r from-[#4a2d31] via-[#5c373b] to-[#4a2d31] hover:from-[#5a363b] hover:to-[#5a363b] active:scale-[0.99] shadow-[0_8px_20px_rgba(74,45,49,0.22)] transition-all flex items-center justify-center gap-2 disabled:opacity-75 disabled:cursor-not-allowed cursor-pointer"
               >
                 {isLoading ? (
                   <>
@@ -355,23 +372,10 @@ export function Login() {
                 )}
               </button>
             </form>
-
-            {/* Home Link */}
-            <div className="mt-6 pt-5 border-t border-[#f0e4dd] text-center">
-              <p className="text-xs text-[#82716b]">
-                Vào ngay bảng điều khiển lịch và setup Nail?{" "}
-                <a
-                  href="/home"
-                  className="font-semibold text-[#a66258] hover:text-[#7f3f35] hover:underline"
-                >
-                  Mở trang Home &rarr;
-                </a>
-              </p>
-            </div>
           </div>
 
           {/* Footer */}
-          <div className="text-center pt-6 mt-auto">
+          <div className="text-center pt-4 mt-4 border-t border-[#f5ebe6] lg:border-none lg:pt-6">
             <p className="text-[11px] text-[#a4938d] flex items-center justify-center gap-1">
               <span>Tuệ Tuệ Beauty Studio</span>
               <span>•</span>
