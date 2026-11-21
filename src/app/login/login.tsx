@@ -21,8 +21,8 @@ import { useAuthStore } from "@/src/libs/store/auth.store";
 import { toast } from "sonner";
 
 export function Login() {
-  const [email, setEmail] = useState("admin@tuetuebeauty.vn");
-  const [password, setPassword] = useState("Tuetue@2026");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
@@ -72,22 +72,20 @@ export function Login() {
   };
 
   return (
-    <div className="relative min-h-dvh w-full bg-[#faf5f2] text-[#2c221e] flex items-center justify-center p-3 sm:p-6 lg:p-10 overflow-x-hidden selection:bg-[#dfb0a3] selection:text-[#38231f]">
+    <div className="relative min-h-dvh w-full bg-[#f5ebe6] text-[#2c221e] flex items-center justify-center p-3 sm:p-6 lg:p-10 overflow-x-hidden selection:bg-[#dfb0a3] selection:text-[#38231f]">
       {/* Nail Art Full-Screen Background */}
       <div className="fixed inset-0 z-0 pointer-events-none">
         <img
-          src="https://images.unsplash.com/photo-1632345031435-8727f6897d53?auto=format&fit=crop&w=1600&q=85"
-          alt="Luxury Nail Studio Background"
-          className="w-full h-full object-cover object-center scale-105"
+          src="https://images.unsplash.com/photo-1604654894610-df63bc536371?auto=format&fit=crop&w=1800&q=90"
+          alt="Luxury Nail Art Background"
+          className="w-full h-full object-cover object-center"
         />
-        {/* Lớp phủ tông kem hồng ấm + làm mờ nhẹ để tôn khung đăng nhập */}
-        <div className="absolute inset-0 bg-gradient-to-br from-[#fdf8f5]/80 via-[#f7eae4]/75 to-[#e8cfc7]/80 backdrop-blur-[6px]" />
-        <div className="absolute top-[-10%] left-[-8%] w-[320px] sm:w-[540px] h-[320px] sm:h-[540px] rounded-full bg-[#f6ded4]/60 blur-[110px]" />
-        <div className="absolute bottom-[-10%] right-[-6%] w-[340px] sm:w-[600px] h-[340px] sm:h-[600px] rounded-full bg-[#d8a79c]/40 blur-[120px]" />
+        {/* Lớp phủ nhẹ để hình nail rõ nét mà vẫn dịu mắt */}
+        <div className="absolute inset-0 bg-gradient-to-br from-[#3a2024]/35 via-[#fdf8f5]/45 to-[#4a2d31]/45 backdrop-blur-[2px]" />
       </div>
 
       {/* Main Container */}
-      <div className="relative z-10 w-full max-w-[440px] lg:max-w-[1100px] lg:min-h-[640px] bg-white/95 backdrop-blur-xl rounded-2xl sm:rounded-3xl shadow-[0_24px_60px_rgba(74,45,49,0.16)] border border-white/80 overflow-hidden grid grid-cols-1 lg:grid-cols-12">
+      <div className="relative z-10 w-full max-w-[440px] lg:max-w-[1100px] lg:min-h-[640px] bg-white/95 backdrop-blur-xl rounded-2xl sm:rounded-3xl shadow-[0_24px_60px_rgba(58,32,36,0.28)] border border-white/80 overflow-hidden grid grid-cols-1 lg:grid-cols-12">
         {/* Left Column: Ẩn trên mobile/tablet để không gây scroll, chỉ hiện từ màn hình lớn (lg) */}
         <div className="hidden lg:flex lg:col-span-5 bg-gradient-to-br from-[#4a2d31] via-[#5c373b] to-[#3a2024] p-10 text-white flex-col justify-between relative overflow-hidden">
           <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:20px_20px] pointer-events-none" />
@@ -137,7 +135,7 @@ export function Login() {
           <div className="relative z-10 my-7">
             <div className="relative rounded-2xl overflow-hidden border border-white/20 shadow-2xl group">
               <img
-                src="https://images.unsplash.com/photo-1604654894610-df63bc536371?auto=format&fit=crop&w=800&q=80"
+                src="https://images.unsplash.com/photo-1632345031435-8727f6897d53?auto=format&fit=crop&w=800&q=85"
                 alt="Tuệ Tuệ Nail Art"
                 className="w-full h-52 object-cover transition-transform duration-500 group-hover:scale-105"
               />
@@ -267,7 +265,7 @@ export function Login() {
                       setLoginError("");
                     }}
                     placeholder="admin@tuetuebeauty.vn"
-                    className={`w-full pl-10 pr-4 py-2.5 sm:py-3 bg-[#fdfbf9]/90 border rounded-xl text-base sm:text-sm text-[#342420] placeholder-[#b29f98] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#aa756b]/30 transition-all ${
+                    className={`w-full pl-10 pr-4 py-2.5 sm:py-3 bg-[#fdfbf9]/95 border rounded-xl text-base sm:text-sm text-[#342420] placeholder-[#b29f98] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#aa756b]/30 transition-all ${
                       loginError
                         ? "border-red-400 focus:border-red-500"
                         : "border-[#e5d8d0] focus:border-[#a66258]"
@@ -311,7 +309,7 @@ export function Login() {
                       setLoginError("");
                     }}
                     placeholder="••••••••"
-                    className={`w-full pl-10 pr-11 py-2.5 sm:py-3 bg-[#fdfbf9]/90 border rounded-xl text-base sm:text-sm text-[#342420] placeholder-[#b29f98] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#aa756b]/30 transition-all ${
+                    className={`w-full pl-10 pr-11 py-2.5 sm:py-3 bg-[#fdfbf9]/95 border rounded-xl text-base sm:text-sm text-[#342420] placeholder-[#b29f98] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#aa756b]/30 transition-all ${
                       loginError
                         ? "border-red-400 focus:border-red-500"
                         : "border-[#e5d8d0] focus:border-[#a66258]"
