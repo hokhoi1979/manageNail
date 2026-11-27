@@ -12,12 +12,14 @@ import {
   LayoutGrid,
   List,
   Eye,
-  Check,
   X,
   Loader2,
   Calendar,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { useBookingAll } from "@/hooks/useBooking";
+import ModalAction from "@/components/modalConfirm-Cancel/page";
 
 export type BookingStatus = "pending" | "confirmed" | "cancelled";
 
@@ -48,6 +50,7 @@ export interface BookingItem {
   service_type: string;
   start_time: string;
   end_time: string;
+  duration_minutes: number;
   date_str: string; // dd/MM/yyyy để hiển thị
   iso_date: string; // YYYY-MM-DD để lọc chính xác theo input[type="date"]
   total_price: number;
@@ -56,6 +59,8 @@ export interface BookingItem {
   cancel_reason?: string | null;
   cancelled_by?: string | null;
 }
+
+const ITEMS_PER_PAGE = 7;
 
 const STATUS_CONFIG: Record<
   BookingStatus,
@@ -128,14 +133,22 @@ const formatBookingFromApi = (raw: RawBookingItem): BookingItem => {
   });
 
   const isValidStart = !isNaN(startDate.getTime());
+  const isValidEnd = !isNaN(endDate.getTime());
+
   const startTimeStr = isValidStart
     ? timeFormatter.format(startDate)
     : raw.start_time;
-  const endTimeStr = !isNaN(endDate.getTime())
-    ? timeFormatter.format(endDate)
-    : raw.end_time;
+  const endTimeStr = isValidEnd ? timeFormatter.format(endDate) : raw.end_time;
   const dateStr = isValidStart ? dateFormatter.format(startDate) : "";
   const isoDate = isValidStart ? getVietnamIsoDate(startDate) : "";
+
+  const durationMinutes =
+    isValidStart && isValidEnd
+      ? Math.max(
+          0,
+          Math.round((endDate.getTime() - startDate.getTime()) / 60000),
+        )
+      : 0;
 
   const normalizedNote =
     raw.customer_note && raw.customer_note.trim().toLowerCase() !== "không"
@@ -152,6 +165,7 @@ const formatBookingFromApi = (raw: RawBookingItem): BookingItem => {
     service_type: raw.service_type,
     start_time: startTimeStr,
     end_time: endTimeStr,
+    duration_minutes: durationMinutes,
     date_str: dateStr,
     iso_date: isoDate,
     total_price: raw.total_estimated_price ?? 0,
@@ -160,6 +174,41 @@ const formatBookingFromApi = (raw: RawBookingItem): BookingItem => {
     cancel_reason: raw.cancel_reason,
     cancelled_by: raw.cancelled_by,
   };
+};
+
+// Tạo danh sách số trang hiển thị gọn (có dấu "..." nếu nhiều trang)
+const getPaginationRange = (
+  currentPage: number,
+  totalPages: number,
+): (number | "...")[] => {
+  if (totalPages <= 5) {
+    return Array.from({ length: totalPages }, (_, i) => i + 1);
+  }
+
+  if (currentPage <= 3) {
+    return [1, 2, 3, 4, "...", totalPages];
+  }
+
+  if (currentPage >= totalPages - 2) {
+    return [
+      1,
+      "...",
+      totalPages - 3,
+      totalPages - 2,
+      totalPages - 1,
+      totalPages,
+    ];
+  }
+
+  return [
+    1,
+    "...",
+    currentPage - 1,
+    currentPage,
+    currentPage + 1,
+    "...",
+    totalPages,
+  ];
 };
 
 interface CalendarTabProps {
@@ -172,7 +221,6 @@ export default function CalendarTab({
   onPendingCountChange,
 }: CalendarTabProps) {
   const { data: calenderData, isLoading } = useBookingAll();
-
   const [localOverrides, setLocalOverrides] = useState<
     Record<string, BookingStatus>
   >({});
@@ -185,8 +233,8 @@ export default function CalendarTab({
   const [selectedBooking, setSelectedBooking] = useState<BookingItem | null>(
     null,
   );
+  const [currentPage, setCurrentPage] = useState<number>(1);
 
-  // Map dữ liệu thật từ API
   const bookings: BookingItem[] = useMemo(() => {
     const response = calenderData as
       | RawBookingItem[]
@@ -249,26 +297,40 @@ export default function CalendarTab({
     });
   }, [dateFilteredBookings, statusFilter, searchTerm]);
 
+  // Tính toán phân trang (7 lịch / trang)
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredBookings.length / ITEMS_PER_PAGE),
+  );
+
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+
+  const paginatedBookings = useMemo(() => {
+    const startIndex = (safeCurrentPage - 1) * ITEMS_PER_PAGE;
+    return filteredBookings.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [filteredBookings, safeCurrentPage]);
+
+  const paginationRange = useMemo(
+    () => getPaginationRange(safeCurrentPage, totalPages),
+    [safeCurrentPage, totalPages],
+  );
+
   const handleUpdateStatus = (id: string, newStatus: BookingStatus) => {
     setLocalOverrides((prev) => ({ ...prev, [id]: newStatus }));
-
-    if (selectedBooking && selectedBooking.id === id) {
-      setSelectedBooking((prev) =>
-        prev ? { ...prev, status: newStatus } : null,
-      );
-    }
-
-    const label = STATUS_CONFIG[newStatus].label;
-    onShowToast?.(`Đã chuyển trạng thái lịch sang "${label}"`);
+    setSelectedBooking(null);
   };
-
-  //   const todayIso = useMemo(() => getVietnamIsoDate(new Date()), []);
 
   const displaySelectedDate = useMemo(() => {
     if (!selectedDate) return "Tất cả ngày";
     const [y, m, d] = selectedDate.split("-");
     return `${d}/${m}/${y}`;
   }, [selectedDate]);
+
+  const startItemIndex = (safeCurrentPage - 1) * ITEMS_PER_PAGE + 1;
+  const endItemIndex = Math.min(
+    safeCurrentPage * ITEMS_PER_PAGE,
+    filteredBookings.length,
+  );
 
   return (
     <div className="space-y-4 sm:space-y-5 animate-in fade-in duration-300">
@@ -350,13 +412,19 @@ export default function CalendarTab({
             <input
               type="text"
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
               placeholder="Tìm tên khách, số điện thoại, mã lịch..."
               className="w-full pl-9 pr-8 py-2 bg-[#fbf8f6] border border-[#e5d8d0] rounded-xl text-xs sm:text-sm text-[#342420] placeholder-[#b29f98] focus:bg-white focus:outline-none focus:border-[#a66258]"
             />
             {searchTerm && (
               <button
-                onClick={() => setSearchTerm("")}
+                onClick={() => {
+                  setSearchTerm("");
+                  setCurrentPage(1);
+                }}
                 className="absolute inset-y-0 right-0 pr-3 flex items-center text-[#9e8b84]"
               >
                 <X size={14} />
@@ -364,7 +432,6 @@ export default function CalendarTab({
             )}
           </div>
 
-          {/* Bộ lọc theo ngày + Chuyển đổi chế độ xem */}
           {/* Bộ lọc theo ngày + Chuyển đổi chế độ xem */}
           <div className="flex items-center gap-2 justify-between md:justify-end">
             <div className="flex items-center gap-1.5 flex-1 sm:flex-initial min-w-0">
@@ -376,12 +443,18 @@ export default function CalendarTab({
                 <input
                   type="date"
                   value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
+                  onChange={(e) => {
+                    setSelectedDate(e.target.value);
+                    setCurrentPage(1);
+                  }}
                   className="bg-transparent focus:outline-none text-xs sm:text-sm text-[#342420] cursor-pointer w-full min-w-0"
                 />
                 {selectedDate && (
                   <button
-                    onClick={() => setSelectedDate("")}
+                    onClick={() => {
+                      setSelectedDate("");
+                      setCurrentPage(1);
+                    }}
                     title="Xóa lọc ngày"
                     className="ml-1 p-0.5 rounded-full hover:bg-[#ede3dc] text-[#8c7b74] cursor-pointer shrink-0"
                   >
@@ -395,18 +468,15 @@ export default function CalendarTab({
                 onClick={() => {
                   const today = getVietnamIsoDate(new Date());
                   setSelectedDate((prev) => (prev === today ? "" : today));
+                  setCurrentPage(1);
                 }}
-                className={`px-2.5 sm:px-3 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer whitespace-nowrap shrink-0 ${
-                  selectedDate !== ""
-                    ? "bg-[#fbf6f3] text-[#4a2d31] border-[#e5d8d0] hover:bg-[#f3e7e1]"
-                    : "bg-[#fbf6f3] text-[#4a2d31] border-[#e5d8d0] hover:bg-[#f3e7e1]"
-                }`}
+                className="px-2.5 sm:px-3 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer whitespace-nowrap shrink-0 bg-[#fbf6f3] text-[#4a2d31] border-[#e5d8d0] hover:bg-[#f3e7e1]"
               >
                 Hôm nay
               </button>
             </div>
 
-            {/* Nút chuyển đổi Dạng bảng / Dạng lưới - Luôn hiển thị trên mọi thiết bị */}
+            {/* Nút chuyển đổi Dạng bảng / Dạng lưới */}
             <div className="flex items-center p-1 bg-[#fbf6f3] rounded-xl border border-[#ede1da] shrink-0">
               <button
                 onClick={() => setViewMode("table")}
@@ -441,7 +511,10 @@ export default function CalendarTab({
           </span>
 
           <button
-            onClick={() => setStatusFilter("all")}
+            onClick={() => {
+              setStatusFilter("all");
+              setCurrentPage(1);
+            }}
             className={`px-3 py-1.5 rounded-full font-medium whitespace-nowrap transition-all cursor-pointer ${
               statusFilter === "all"
                 ? "bg-[#4a2d31] text-white shadow-sm font-semibold"
@@ -452,7 +525,10 @@ export default function CalendarTab({
           </button>
 
           <button
-            onClick={() => setStatusFilter("pending")}
+            onClick={() => {
+              setStatusFilter("pending");
+              setCurrentPage(1);
+            }}
             className={`px-3 py-1.5 rounded-full font-medium whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
               statusFilter === "pending"
                 ? "bg-amber-600 text-white shadow-sm font-semibold"
@@ -463,7 +539,10 @@ export default function CalendarTab({
           </button>
 
           <button
-            onClick={() => setStatusFilter("confirmed")}
+            onClick={() => {
+              setStatusFilter("confirmed");
+              setCurrentPage(1);
+            }}
             className={`px-3 py-1.5 rounded-full font-medium whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
               statusFilter === "confirmed"
                 ? "bg-emerald-600 text-white shadow-sm font-semibold"
@@ -474,7 +553,10 @@ export default function CalendarTab({
           </button>
 
           <button
-            onClick={() => setStatusFilter("cancelled")}
+            onClick={() => {
+              setStatusFilter("cancelled");
+              setCurrentPage(1);
+            }}
             className={`px-3 py-1.5 rounded-full font-medium whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
               statusFilter === "cancelled"
                 ? "bg-rose-600 text-white shadow-sm font-semibold"
@@ -500,272 +582,239 @@ export default function CalendarTab({
           </p>
           {selectedDate && (
             <button
-              onClick={() => setSelectedDate("")}
+              onClick={() => {
+                setSelectedDate("");
+                setCurrentPage(1);
+              }}
               className="text-xs font-semibold text-[#a66258] underline cursor-pointer"
             >
               Xem tất cả các ngày
             </button>
           )}
         </div>
-      ) : viewMode === "table" ? (
-        <div className="bg-white rounded-2xl border border-[#ede3dc] shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-[#fbf8f6] border-b border-[#ede3dc] text-[11px] uppercase tracking-wider text-[#8c7b74]">
-                  <th className="py-3 px-4 font-semibold">Khách hàng</th>
-                  <th className="py-3 px-4 font-semibold">Dịch vụ</th>
-                  <th className="py-3 px-4 font-semibold">Thời gian</th>
-                  <th className="py-3 px-4 font-semibold">Trạng thái</th>
-                  <th className="py-3 px-4 font-semibold text-right">
-                    Thao tác
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#f3eae4] text-xs sm:text-sm">
-                {filteredBookings.map((item) => {
-                  const statusCfg =
-                    STATUS_CONFIG[item.status] || STATUS_CONFIG.pending;
-                  const StatusIcon = statusCfg.icon;
-                  return (
-                    <tr
-                      key={item.id}
-                      className="hover:bg-[#fdfbfa] transition-colors"
-                    >
-                      <td className="py-3.5 px-4">
-                        <div className="font-bold text-[#342420]">
-                          {item.customer_name}
-                        </div>
-                        <div className="text-xs text-[#8c7b74] flex items-center gap-1 mt-0.5">
-                          <Phone size={12} />
-                          <span>{item.customer_phone}</span>
-                          <span className="text-[#c5b5ae]">•</span>
-                          <span className="font-mono text-[11px]">
-                            {item.booking_code}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="py-3.5 px-4 max-w-xs">
-                        <div className="font-medium text-[#342420] capitalize line-clamp-1">
-                          {item.service_title}
-                        </div>
-                        {item.customer_note && (
-                          <div className="text-[11px] text-[#9b8982] line-clamp-1 mt-0.5">
-                            Ghi chú: {item.customer_note}
-                          </div>
-                        )}
-                        {item.status === "cancelled" && item.cancel_reason && (
-                          <div className="text-[11px] text-rose-600 line-clamp-1 mt-0.5">
-                            Lý do: {item.cancel_reason}
-                          </div>
-                        )}
-                      </td>
-                      <td className="py-3.5 px-4 whitespace-nowrap">
-                        <div className="font-semibold text-[#4a2d31] flex items-center gap-1">
-                          <Clock size={13} className="text-[#a66258]" />
-                          <span>
-                            {item.start_time} - {item.end_time}
-                          </span>
-                        </div>
-                        <div className="text-[11px] text-[#8c7b74] mt-0.5">
-                          {item.date_str}
-                        </div>
-                      </td>
-
-                      <td className="py-3.5 px-4 whitespace-nowrap">
-                        <span
-                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${statusCfg.badgeClass}`}
+      ) : (
+        <>
+          {viewMode === "table" ? (
+            <div className="bg-white rounded-2xl border border-[#ede3dc] shadow-sm overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-[#fbf8f6] border-b border-[#ede3dc] text-[11px] uppercase tracking-wider text-[#8c7b74]">
+                      <th className="py-3 px-4 font-semibold">Khách hàng</th>
+                      <th className="py-3 px-4 font-semibold">Dịch vụ</th>
+                      <th className="py-3 px-4 font-semibold">Thời gian</th>
+                      <th className="py-3 px-4 font-semibold">Trạng thái</th>
+                      <th className="py-3 px-4 font-semibold text-right">
+                        Thao tác
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#f3eae4] text-xs sm:text-sm">
+                    {paginatedBookings.map((item) => {
+                      const statusCfg =
+                        STATUS_CONFIG[item.status] || STATUS_CONFIG.pending;
+                      const StatusIcon = statusCfg.icon;
+                      return (
+                        <tr
+                          key={item.id}
+                          className="hover:bg-[#fdfbfa] transition-colors"
                         >
-                          <StatusIcon size={13} />
+                          <td className="py-3.5 px-4">
+                            <div className="font-bold text-[#342420]">
+                              {item.customer_name}
+                            </div>
+                            <div className="text-xs text-[#8c7b74] flex items-center gap-1 mt-0.5">
+                              <Phone size={12} />
+                              <span>{item.customer_phone}</span>
+                              <span className="text-[#c5b5ae]">•</span>
+                              <span className="font-mono text-[11px]">
+                                {item.booking_code}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-4 max-w-xs">
+                            <div className="font-medium text-[#342420] capitalize line-clamp-1">
+                              {item.service_title}
+                            </div>
+                            {item.customer_note && (
+                              <div className="text-[11px] text-[#9b8982] line-clamp-1 mt-0.5">
+                                Ghi chú: {item.customer_note}
+                              </div>
+                            )}
+                            {item.status === "cancelled" &&
+                              item.cancel_reason && (
+                                <div className="text-[11px] text-rose-600 line-clamp-1 mt-0.5">
+                                  Lý do: {item.cancel_reason}
+                                </div>
+                              )}
+                          </td>
+                          <td className="py-3.5 px-4 whitespace-nowrap">
+                            <div className="font-semibold text-[#4a2d31] flex items-center gap-1">
+                              <Clock size={13} className="text-[#a66258]" />
+                              <span>
+                                {item.start_time} - {item.end_time}
+                              </span>
+                            </div>
+                            <div className="text-[11px] text-[#8c7b74] mt-0.5">
+                              {item.date_str}
+                              {item.duration_minutes > 0 &&
+                                ` • ${item.duration_minutes} phút`}
+                            </div>
+                          </td>
+
+                          <td className="py-3.5 px-4 whitespace-nowrap">
+                            <span
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${statusCfg.badgeClass}`}
+                            >
+                              <StatusIcon size={13} />
+                              {statusCfg.label}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                            <button
+                              onClick={() => setSelectedBooking(item)}
+                              title="Xem chi tiết"
+                              className="p-1.5 rounded-lg bg-[#f6eee9] text-[#4a2d31] hover:bg-[#4a2d31] hover:text-white transition-colors cursor-pointer"
+                            >
+                              <Eye size={15} />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+              {paginatedBookings.map((item) => {
+                const statusCfg =
+                  STATUS_CONFIG[item.status] || STATUS_CONFIG.pending;
+                const StatusIcon = statusCfg.icon;
+                return (
+                  <div
+                    key={item.id}
+                    onClick={() => setSelectedBooking(item)}
+                    className="bg-white p-4 rounded-2xl border border-[#ede3dc] shadow-sm flex flex-col justify-between space-y-3 cursor-pointer hover:border-[#d5bfb6] transition-colors"
+                  >
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono text-xs font-bold text-[#8c7b74]">
+                          {item.booking_code}
+                        </span>
+                        <span
+                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${statusCfg.badgeClass}`}
+                        >
+                          <StatusIcon size={12} />
                           {statusCfg.label}
                         </span>
-                      </td>
-                      <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                        <div className="inline-flex items-center gap-1.5">
-                          {item.status === "pending" && (
-                            <>
-                              <button
-                                onClick={() =>
-                                  handleUpdateStatus(item.id, "confirmed")
-                                }
-                                title="Xác nhận lịch"
-                                className="p-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-600 hover:text-white transition-colors cursor-pointer"
-                              >
-                                <Check size={15} />
-                              </button>
-                              <button
-                                onClick={() =>
-                                  handleUpdateStatus(item.id, "cancelled")
-                                }
-                                title="Từ chối lịch"
-                                className="p-1.5 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-600 hover:text-white transition-colors cursor-pointer"
-                              >
-                                <X size={15} />
-                              </button>
-                            </>
-                          )}
-                          <button
-                            onClick={() => setSelectedBooking(item)}
-                            title="Xem chi tiết"
-                            className="p-1.5 rounded-lg bg-[#f6eee9] text-[#4a2d31] hover:bg-[#4a2d31] hover:text-white transition-colors cursor-pointer"
-                          >
-                            <Eye size={15} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
-          {filteredBookings.map((item) => {
-            const statusCfg =
-              STATUS_CONFIG[item.status] || STATUS_CONFIG.pending;
-            const StatusIcon = statusCfg.icon;
-            return (
-              <div
-                key={item.id}
-                onClick={() => setSelectedBooking(item)}
-                className="bg-white p-4 rounded-2xl border border-[#ede3dc] shadow-sm flex flex-col justify-between space-y-3 cursor-pointer hover:border-[#d5bfb6] transition-colors"
-              >
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono text-xs font-bold text-[#8c7b74]">
-                      {item.booking_code}
-                    </span>
-                    <span
-                      className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${statusCfg.badgeClass}`}
-                    >
-                      <StatusIcon size={12} />
-                      {statusCfg.label}
-                    </span>
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-sm text-[#342420]">
-                      {item.customer_name}
-                    </h4>
-                    <p className="text-xs text-[#8c7b74]">
-                      {item.customer_phone}
-                    </p>
-                  </div>
-                  <p className="text-xs font-medium capitalize text-[#4a2d31] bg-[#fbf6f3] p-2.5 rounded-xl">
-                    {item.service_title}
-                  </p>
-                </div>
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-sm text-[#342420]">
+                          {item.customer_name}
+                        </h4>
+                        <p className="text-xs text-[#8c7b74]">
+                          {item.customer_phone}
+                        </p>
+                      </div>
+                      <p className="text-xs font-medium capitalize text-[#4a2d31] bg-[#fbf6f3] p-2.5 rounded-xl">
+                        {item.service_title}
+                      </p>
+                    </div>
 
-                <div className="pt-2 border-t border-[#f3eae4] flex items-center justify-between text-xs">
-                  <span className="font-semibold text-[#4a2d31]">
-                    {item.start_time} - {item.end_time} ({item.date_str})
-                  </span>
-                  <span className="font-bold text-[#a66258]">
-                    {formatPriceVND(item.total_price)}
-                  </span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* MODAL CHI TIẾT LỊCH HẸN */}
-      {selectedBooking && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl border border-[#ede3dc]">
-            <div className="flex items-center justify-between border-b border-[#f3eae4] pb-3">
-              <div>
-                <span className="text-[11px] font-mono text-[#8c7b74]">
-                  Mã lịch: {selectedBooking.booking_code}
-                </span>
-                <h3 className="font-bold text-base text-[#342420]">
-                  {selectedBooking.customer_name}
-                </h3>
-              </div>
-              <button
-                onClick={() => setSelectedBooking(null)}
-                className="p-1.5 rounded-lg hover:bg-[#f6eee9] text-[#8c7b74]"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="space-y-2.5 text-xs">
-              <div className="flex justify-between">
-                <span className="text-[#8c7b74]">Số điện thoại:</span>
-                <span className="font-semibold">
-                  {selectedBooking.customer_phone}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[#8c7b74]">Thời gian hẹn:</span>
-                <span className="font-semibold">
-                  {selectedBooking.start_time} - {selectedBooking.end_time} (
-                  {selectedBooking.date_str})
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[#8c7b74]">Dịch vụ:</span>
-                <span className="font-semibold capitalize">
-                  {selectedBooking.service_title}
-                </span>
-              </div>
-
-              {selectedBooking.customer_note && (
-                <div className="p-2.5 rounded-xl bg-amber-50/70 text-amber-900 border border-amber-200/60">
-                  <strong>Ghi chú khách:</strong>{" "}
-                  {selectedBooking.customer_note}
-                </div>
-              )}
-
-              {selectedBooking.status === "cancelled" &&
-                selectedBooking.cancel_reason && (
-                  <div className="p-2.5 rounded-xl bg-rose-50 text-rose-800 border border-rose-200/70">
-                    <strong>Lý do hủy:</strong> {selectedBooking.cancel_reason}
-                    {selectedBooking.cancelled_by && (
-                      <span className="block text-[11px] opacity-80 mt-0.5">
-                        Người hủy:{" "}
-                        {selectedBooking.cancelled_by === "customer"
-                          ? "Khách hàng"
-                          : "Salon"}
+                    <div className="pt-2 border-t border-[#f3eae4] flex items-center justify-between text-xs">
+                      <span className="font-semibold text-[#4a2d31]">
+                        {item.start_time} - {item.end_time} ({item.date_str}
+                        {item.duration_minutes > 0 &&
+                          ` • ${item.duration_minutes}p`}
+                        )
                       </span>
-                    )}
+                      <span className="font-bold text-[#a66258]">
+                        {formatPriceVND(item.total_price)}
+                      </span>
+                    </div>
                   </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* THANH PHÂN TRANG (7 LỊCH / TRANG) */}
+          <div className="bg-white px-4 py-3 rounded-2xl border border-[#ede3dc] shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+            <p className="text-[#8c7b74]">
+              Hiển thị{" "}
+              <span className="font-semibold text-[#342420]">
+                {startItemIndex}–{endItemIndex}
+              </span>{" "}
+              trong tổng số{" "}
+              <span className="font-semibold text-[#342420]">
+                {filteredBookings.length}
+              </span>{" "}
+              lịch hẹn
+            </p>
+
+            {totalPages > 1 && (
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.max(1, prev - 1))
+                  }
+                  disabled={safeCurrentPage === 1}
+                  title="Trang trước"
+                  className="p-1.5 rounded-lg border border-[#e5d8d0] bg-[#fbf8f6] text-[#4a2d31] hover:bg-[#f3e7e1] disabled:opacity-40 disabled:pointer-events-none transition-colors cursor-pointer"
+                >
+                  <ChevronLeft size={15} />
+                </button>
+
+                {paginationRange.map((page, index) =>
+                  page === "..." ? (
+                    <span
+                      key={`ellipsis-${index}`}
+                      className="px-2 py-1 text-[#8c7b74] select-none"
+                    >
+                      ...
+                    </span>
+                  ) : (
+                    <button
+                      key={page}
+                      type="button"
+                      onClick={() => setCurrentPage(page)}
+                      className={`min-w-[30px] h-[30px] px-2 rounded-lg font-semibold transition-colors cursor-pointer ${
+                        safeCurrentPage === page
+                          ? "bg-[#4a2d31] text-white shadow-sm"
+                          : "bg-[#fbf8f6] text-[#6d5c56] border border-[#e5d8d0] hover:bg-[#f3e7e1]"
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  ),
                 )}
 
-              <div className="bg-[#fbf8f6] p-3 rounded-xl border border-[#ede3dc] flex justify-between font-bold text-sm text-[#4a2d31]">
-                <span>Tổng dự kiến</span>
-                <span>{formatPriceVND(selectedBooking.total_price)}</span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+                  }
+                  disabled={safeCurrentPage === totalPages}
+                  title="Trang sau"
+                  className="p-1.5 rounded-lg border border-[#e5d8d0] bg-[#fbf8f6] text-[#4a2d31] hover:bg-[#f3e7e1] disabled:opacity-40 disabled:pointer-events-none transition-colors cursor-pointer"
+                >
+                  <ChevronRight size={15} />
+                </button>
               </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#f3eae4]">
-              {selectedBooking.status !== "cancelled" && (
-                <button
-                  onClick={() =>
-                    handleUpdateStatus(selectedBooking.id, "cancelled")
-                  }
-                  className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-rose-50 text-rose-700 hover:bg-rose-600 hover:text-white cursor-pointer"
-                >
-                  Từ chối lịch
-                </button>
-              )}
-              {selectedBooking.status !== "confirmed" && (
-                <button
-                  onClick={() =>
-                    handleUpdateStatus(selectedBooking.id, "confirmed")
-                  }
-                  className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700 cursor-pointer"
-                >
-                  Xác nhận lịch
-                </button>
-              )}
-            </div>
+            )}
           </div>
-        </div>
+        </>
       )}
+
+      {/* MODAL CHI TIẾT / THAO TÁC LỊCH HẸN */}
+      <ModalAction
+        booking={selectedBooking}
+        onClose={() => setSelectedBooking(null)}
+        onUpdateStatus={handleUpdateStatus}
+      />
     </div>
   );
 }

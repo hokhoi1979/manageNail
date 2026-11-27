@@ -21,3 +21,28 @@ export const useBusySlots = (startDate: string, endDate: string) => {
     enabled: !!startDate && !!endDate,
   });
 };
+
+export const useConfirmBooking = (bookingId: string) => {
+  const queryClient = useQueryClient();
+  const { message } = App.useApp();
+  return useMutation({
+    mutationFn: () => bookingService.confirmBooking(bookingId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["bookings", "all"] });
+      message.success("Xác nhận lịch hẹn thành công");
+    },
+  });
+};
+
+export const useCancelBooking = (bookingId: string) => {
+  const queryClient = useQueryClient();
+  const { message } = App.useApp();
+  return useMutation({
+    mutationFn: (cancelReason?: string) =>
+      bookingService.cancelByCustomer(bookingId, cancelReason),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["bookings", "all"] });
+      message.success("Hủy lịch hẹn thành công");
+    },
+  });
+};

@@ -1,9 +1,12 @@
 import { supabase } from "../apis/client";
 import { endpoints } from "../apis/endpoints";
 
+export type ServiceCategory = "nail" | "gội đầu" | "combo";
+
 export interface ServiceItem {
   id: string;
   name: string;
+  category: ServiceCategory;
   description: string | null;
   price: number;
   duration_minutes: number;
@@ -16,20 +19,13 @@ export interface ServiceItem {
 export const serviceService = {
   // Lấy danh sách dịch vụ active cho khách
   getActiveList: async (): Promise<ServiceItem[]> => {
-    console.log("1. Start Supabase request");
-
     const { data, error } = await supabase
       .from(endpoints.services)
       .select("*")
       .eq("is_active", true)
       .order("display_order", { ascending: true });
 
-    console.log("2. Supabase response received");
-    console.log("Data:", data);
-    console.log("Error:", error);
-
     if (error) throw error;
-
     return data || [];
   },
 
@@ -42,6 +38,25 @@ export const serviceService = {
 
     if (error) throw error;
     return data || [];
+  },
+
+  // Admin: Upload ảnh dịch vụ lên bucket `service-images` và trả về link public
+  uploadImage: async (file: File): Promise<string> => {
+    const fileExt = file.name.split(".").pop() || "jpg";
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${fileExt}`;
+    const filePath = `services/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("service-images")
+      .upload(filePath, file, { upsert: true });
+
+    if (uploadError) throw uploadError;
+
+    const { data } = supabase.storage
+      .from("service-images")
+      .getPublicUrl(filePath);
+
+    return data.publicUrl;
   },
 
   // Admin: Thêm/Sửa/Xóa dịch vụ

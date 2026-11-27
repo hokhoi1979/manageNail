@@ -146,4 +146,47 @@ export const bookingService = {
 
     return data ?? [];
   },
+
+  confirmBooking: async (bookingId: string) => {
+    const { error, count } = await supabase
+      .from(endpoints.bookings)
+      .update(
+        {
+          status: "confirmed",
+        },
+        { count: "exact" },
+      )
+      .eq("id", bookingId)
+      .eq("status", "pending");
+
+    if (error) throw error;
+    if (count === 0) {
+      throw new Error(
+        "Không thể hủy đơn (Đơn đã được duyệt hoặc không tồn tại).",
+      );
+    }
+    return true;
+  },
+
+  cancelBooking: async (bookingId: string, cancelReason?: string) => {
+    const { error, count } = await supabase
+      .from(endpoints.bookings)
+      .update(
+        {
+          status: "cancelled",
+          cancelled_by: "admin",
+          cancel_reason: cancelReason || null,
+        },
+        { count: "exact" },
+      )
+      .eq("id", bookingId)
+      .in("status", ["pending", "confirmed"]);
+    if (error) throw error;
+    if (count === 0) {
+      throw new Error(
+        "Không thể hủy đơn (Đơn đã được duyệt hoặc không tồn tại).",
+      );
+    }
+    return true;
+  },
 };
